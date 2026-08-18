@@ -32,7 +32,7 @@ namespace BMECat.net
         private XmlTextWriter Writer { get; set; }
 
 
-        public async Task SaveAsync(ProductCatalog catalog, Stream stream, BMECatExtensions extensions = null)
+        public async Task SaveAsync(ProductCatalog catalog, Stream stream, BMECatExtensions extensions = null, BMECatVersion version = BMECatVersion.Version2005)
         {
             if (!stream.CanWrite || !stream.CanSeek)
             {
@@ -48,8 +48,8 @@ namespace BMECat.net
 
             #region XML-Kopfbereich
             Writer.WriteStartElement("BMECAT");
-            Writer.WriteAttributeString("version", "2005");
-            Writer.WriteAttributeString("xmlns", "http://www.bmecat.org/bmecat/2005fd");
+            Writer.WriteAttributeString("version", _getVersionString(version));
+            Writer.WriteAttributeString("xmlns", _getNamespace(version));
             #endregion // !XML-Kopfbereich
 
             #region Header
@@ -69,35 +69,16 @@ namespace BMECat.net
             _writeTransport(Writer, this.Catalog.Transport);
             Writer.WriteEndElement(); // !CATALOG
 
-            if (this.Catalog.Buyer != null)
-            {
-                Writer.WriteStartElement("BUYER");
-                if (!String.IsNullOrEmpty(this.Catalog.Buyer.Id))
-                {
-                    Writer.WriteStartElement("BUYER_ID");
-                    Writer.WriteAttributeString("type", "buyer_specific");
-                    Writer.WriteString(this.Catalog.Buyer.Id);
-                    Writer.WriteEndElement(); // !BUYER_ID
-                }
-                _writeOptionalElementString(Writer, "BUYER_NAME", this.Catalog.Buyer.Name);
-
-                Writer.WriteStartElement("ADDRESS");
-                Writer.WriteAttributeString("type", "buyer");
-                Writer.WriteElementString("NAME", this.Catalog.Buyer.Name);
-                if (!String.IsNullOrEmpty(this.Catalog.Buyer.ContactName))
-                {
-                    Writer.WriteElementString("CONTACT", this.Catalog.Buyer.ContactName);
-                }
-                Writer.WriteEndElement(); // !ADDRESS
-
-                Writer.WriteEndElement(); // !BUYER
-            }
+            _writeParty("BUYER", this.Catalog.Buyer);
+            _writeParty("SUPPLIER", this.Catalog.Supplier);
+            _writeAgreement();
 
             Writer.WriteEndElement(); // !HEADER
             #endregion // !Header
 
             #region PRODUCTS
             Writer.WriteStartElement("T_NEW_CATALOG");
+            _writeCatalogStructures();
             foreach(Product product in this.Catalog.Products)
             {
                 Writer.WriteStartElement("PRODUCT");
@@ -126,9 +107,19 @@ namespace BMECat.net
                 _writeOptionalElementString(Writer, "MANUFACTURER_NAME", String.Format("{0}", product.ManufacturerName));
                 _writeOptionalElementString(Writer, "MANUFACTURER_TYPE_DESCR", String.Format("{0}", product.ManufacturerTypeDescription));
                 _writeOptionalElementString(Writer, "ERP_GROUP_SUPPLIER", String.Format("{0}", product.ERPGroupSupplier));
-                _writeOptionalElementString(Writer, "ERP_GROUP_BUYER", String.Format("{0}", product.ERPGroupBuyer));             
+                _writeOptionalElementString(Writer, "ERP_GROUP_BUYER", String.Format("{0}", product.ERPGroupBuyer));
+
+                if (product.Keywords != null)
+                {
+                    foreach (string keyword in product.Keywords)
+                    {
+                        _writeOptionalElementString(Writer, "KEYWORD", keyword);
+                    }
+                }
 
                 Writer.WriteEndElement(); // !PRODUCT_DETAILS
+
+                _writeFeatureSets(product.FeatureSets, extensions);
 
                 if (product.OrderDetails != null)
                 {
@@ -155,6 +146,11 @@ namespace BMECat.net
                     Writer.WriteEndElement(); // !PRODUCT_PRICE_DETAILS
                 }
 
+                _writeMimeInfos(product.MimeInfos);
+                _writeLogisticsDetails(product.LogisticsDetails);
+                _writeReferences(product.References);
+                _writeCatalogGroupMappings(product.ProductCatalogGroupMappings);
+
                 Writer.WriteEndElement(); // !PRODUCT
             }
             Writer.WriteEndElement(); // !T_NEW_CATALOG
@@ -171,10 +167,10 @@ namespace BMECat.net
         } // !SaveAsync()
 
 
-        public async Task SaveAsync(ProductCatalog catalog, string filename, BMECatExtensions extensions = null)
+        public async Task SaveAsync(ProductCatalog catalog, string filename, BMECatExtensions extensions = null, BMECatVersion version = BMECatVersion.Version2005)
         {
             FileStream fs = new FileStream(filename, FileMode.Create, FileAccess.Write);
-            await SaveAsync(catalog, fs, extensions);
+            await SaveAsync(catalog, fs, extensions, version);
             fs.Flush();
             fs.Close();
         } // !SaveAsync()
@@ -275,5 +271,306 @@ namespace BMECat.net
                 }
             }
         } // !_writeOptionalElementString()
+
+
+        private static string _getNamespace(BMECatVersion version)
+        {
+            switch (version)
+            {
+                case BMECatVersion.Version12: return "http://www.bmecat.org/bmecat-1.2";
+                default: return "http://www.bmecat.org/bmecat/2005fd";
+            }
+        } // !_getNamespace()
+
+
+        private static string _getVersionString(BMECatVersion version)
+        {
+            switch (version)
+            {
+                case BMECatVersion.Version12: return "1.2";
+                default: return "2005";
+            }
+        } // !_getVersionString()
+
+
+        private void _writeParty(string role, Party party)
+        {
+            if (party == null)
+            {
+                return;
+            }
+
+            Writer.WriteStartElement(role);
+            if (!string.IsNullOrEmpty(party.Id))
+            {
+                Writer.WriteStartElement($"{role}_ID");
+                Writer.WriteAttributeString("type", $"{role.ToLower()}_specific");
+                Writer.WriteString(party.Id);
+                Writer.WriteEndElement();
+            }
+            _writeOptionalElementString(Writer, $"{role}_NAME", party.Name);
+
+            Writer.WriteStartElement("ADDRESS");
+            Writer.WriteAttributeString("type", role.ToLower());
+            _writeOptionalElementString(Writer, "NAME", party.Name);
+            _writeOptionalElementString(Writer, "NAME2", party.Name2);
+            _writeOptionalElementString(Writer, "NAME3", party.Name3);
+            _writeOptionalElementString(Writer, "DEPARTMENT", party.Department);
+            _writeOptionalElementString(Writer, "CONTACT", party.ContactName);
+            _writeOptionalElementString(Writer, "STREET", party.Street);
+            _writeOptionalElementString(Writer, "ZIP", party.Zip);
+            _writeOptionalElementString(Writer, "BOXNO", party.BoxNo);
+            _writeOptionalElementString(Writer, "ZIPBOX", party.ZipBox);
+            _writeOptionalElementString(Writer, "CITY", party.City);
+            _writeOptionalElementString(Writer, "STATE", party.State);
+            _writeOptionalElementString(Writer, "COUNTRY", party.Country);
+            _writeOptionalElementString(Writer, "VAT_ID", party.VATID);
+            _writeOptionalElementString(Writer, "PHONE", party.Phone);
+            _writeOptionalElementString(Writer, "FAX", party.Fax);
+            Writer.WriteEndElement(); // !ADDRESS
+
+            Writer.WriteEndElement(); // !BUYER / SUPPLIER
+        } // !_writeParty()
+
+
+        private void _writeAgreement()
+        {
+            if (this.Catalog.Agreement == null)
+            {
+                return;
+            }
+
+            Writer.WriteStartElement("AGREEMENT");
+            _writeOptionalElementString(Writer, "AGREEMENT_ID", this.Catalog.Agreement.Id);
+            if (this.Catalog.Agreement.StartDate.HasValue)
+            {
+                _writeDateTime("DATETIME", "agreement_start_date", this.Catalog.Agreement.StartDate);
+            }
+            if (this.Catalog.Agreement.EndDate.HasValue)
+            {
+                _writeDateTime("DATETIME", "agreement_end_date", this.Catalog.Agreement.EndDate);
+            }
+            Writer.WriteEndElement(); // !AGREEMENT
+        } // !_writeAgreement()
+
+
+        private void _writeCatalogStructures()
+        {
+            if (this.Catalog.CatalogStructures == null || this.Catalog.CatalogStructures.Count == 0)
+            {
+                return;
+            }
+
+            Writer.WriteStartElement("CATALOG_GROUP_SYSTEM");
+            foreach (CatalogStructure group in this.Catalog.CatalogStructures)
+            {
+                Writer.WriteStartElement("CATALOG_STRUCTURE");
+                if (group.Type.HasValue)
+                {
+                    Writer.WriteAttributeString("type", group.Type.Value == CatalogStructureTypes.Leaf ? "leaf" : "node");
+                }
+                _writeOptionalElementString(Writer, "GROUP_ID", group.GroupId);
+                _writeOptionalElementString(Writer, "GROUP_NAME", group.GroupName);
+                _writeOptionalElementString(Writer, "PARENT_ID", group.ParentId);
+                _writeOptionalElementString(Writer, "GROUP_ORDER", group.GroupOrder);
+                _writeMimeInfos(group.MimeInfos);
+                Writer.WriteEndElement(); // !CATALOG_STRUCTURE
+            }
+            Writer.WriteEndElement(); // !CATALOG_GROUP_SYSTEM
+        } // !_writeCatalogStructures()
+
+
+        private void _writeMimeInfos(IList<MimeInfo> mimeInfos)
+        {
+            if (mimeInfos == null || mimeInfos.Count == 0)
+            {
+                return;
+            }
+
+            Writer.WriteStartElement("MIME_INFO");
+            foreach (MimeInfo mime in mimeInfos)
+            {
+                Writer.WriteStartElement("MIME");
+                string mimeType = mime.MimeType != MimeTypes.Unknown ? mime.MimeType.EnumToString() : null;
+                _writeOptionalElementString(Writer, "MIME_TYPE", mimeType);
+                _writeOptionalElementString(Writer, "MIME_SOURCE", mime.Source);
+                _writeOptionalElementString(Writer, "MIME_DESCR", mime.Description);
+                _writeOptionalElementString(Writer, "MIME_ALT", mime.Alt);
+                _writeOptionalElementString(Writer, "MIME_PURPOSE", mime.Purpose);
+                if (mime.Order.HasValue)
+                {
+                    Writer.WriteElementString("MIME_ORDER", mime.Order.Value.ToString());
+                }
+                Writer.WriteEndElement(); // !MIME
+            }
+            Writer.WriteEndElement(); // !MIME_INFO
+        } // !_writeMimeInfos()
+
+
+        private void _writeFeatureSets(IList<FeatureSet> featureSets, BMECatExtensions extensions)
+        {
+            if (featureSets == null || featureSets.Count == 0)
+            {
+                return;
+            }
+
+            foreach (FeatureSet featureSet in featureSets)
+            {
+                Writer.WriteStartElement("PRODUCT_FEATURES");
+                if (featureSet.FeatureClassificationSystem != null)
+                {
+                    _writeOptionalElementString(Writer, "REFERENCE_FEATURE_SYSTEM_NAME", featureSet.FeatureClassificationSystem.Classification);
+                    foreach (FeatureClassificationSystemGroupId groupId in featureSet.FeatureClassificationSystem.GroupIds)
+                    {
+                        if (!string.IsNullOrEmpty(groupId.Name))
+                        {
+                            Writer.WriteStartElement("REFERENCE_FEATURE_GROUP_ID");
+                            if (groupId.Type != FeatureClassificationSystemGroupIdTypes.Unknown)
+                            {
+                                Writer.WriteAttributeString("type", groupId.Type.ToString().ToLower());
+                            }
+                            Writer.WriteString(groupId.Name);
+                            Writer.WriteEndElement();
+                        }
+                    }
+                    _writeOptionalElementString(Writer, "REFERENCE_FEATURE_GROUP_NAME", featureSet.FeatureClassificationSystem.GroupName);
+                }
+
+                if (featureSet.Features != null)
+                {
+                    foreach (Feature feature in featureSet.Features)
+                    {
+                        Writer.WriteStartElement("FEATURE");
+                        _writeOptionalElementString(Writer, "FNAME", feature.Name);
+                        if (feature.Values != null)
+                        {
+                            foreach (string value in feature.Values)
+                            {
+                                _writeOptionalElementString(Writer, "FVALUE", value);
+                            }
+                        }
+                        _writeOptionalElementString(Writer, "FUNIT", extensions, feature.Unit);
+                        _writeOptionalElementString(Writer, "FDESCR", feature.Description);
+                        _writeOptionalElementString(Writer, "FORDER", feature.Order);
+                        Writer.WriteEndElement(); // !FEATURE
+                    }
+                }
+                Writer.WriteEndElement(); // !PRODUCT_FEATURES
+            }
+        } // !_writeFeatureSets()
+
+
+        private void _writeOptionalElementString(XmlTextWriter writer, string tagName, BMECatExtensions extensions, QuantityCode value)
+        {
+            if (value == null || (value.ClearText == null && value.Code == QuantityCodes.Unknown))
+            {
+                return;
+            }
+            _writeOptionalElementString(writer, tagName, value, extensions);
+        } // !_writeOptionalElementString() for QuantityCode with null check
+
+
+        private void _writeLogisticsDetails(LogisticsDetails logistics)
+        {
+            if (logistics == null)
+            {
+                return;
+            }
+
+            Writer.WriteStartElement("PRODUCT_LOGISTICS");
+            if (logistics.CountryOfOrigin.HasValue)
+            {
+                Writer.WriteElementString("COUNTRY_OF_ORIGIN", logistics.CountryOfOrigin.Value.EnumToString());
+            }
+            if (logistics.CustomsTariffNumber != null)
+            {
+                foreach (string tariff in logistics.CustomsTariffNumber)
+                {
+                    _writeOptionalElementString(Writer, "CUSTOMS_TARIFF_NUMBER", tariff);
+                }
+            }
+            if (logistics.Weight.HasValue)
+            {
+                Writer.WriteElementString("WEIGHT", _formatDecimal(logistics.Weight.Value));
+            }
+            if (logistics.Length.HasValue)
+            {
+                Writer.WriteElementString("LENGTH", _formatDecimal(logistics.Length.Value));
+            }
+            if (logistics.Width.HasValue)
+            {
+                Writer.WriteElementString("WIDTH", _formatDecimal(logistics.Width.Value));
+            }
+            if (logistics.Depth.HasValue)
+            {
+                Writer.WriteElementString("DEPTH", _formatDecimal(logistics.Depth.Value));
+            }
+            if (logistics.Volume.HasValue)
+            {
+                Writer.WriteElementString("VOLUME", _formatDecimal(logistics.Volume.Value));
+            }
+            Writer.WriteEndElement(); // !PRODUCT_LOGISTICS
+        } // !_writeLogisticsDetails()
+
+
+        private void _writeReferences(IList<Reference> references)
+        {
+            if (references == null || references.Count == 0)
+            {
+                return;
+            }
+
+            foreach (Reference reference in references)
+            {
+                string typeStr = _referenceTypeToString(reference.Type);
+                if (typeStr == null)
+                {
+                    continue;
+                }
+
+                Writer.WriteStartElement("PRODUCT_REFERENCE");
+                Writer.WriteAttributeString("type", typeStr);
+                _writeOptionalElementString(Writer, "PROD_ID_TO", reference.IdTo);
+                Writer.WriteEndElement(); // !PRODUCT_REFERENCE
+            }
+        } // !_writeReferences()
+
+
+        private void _writeCatalogGroupMappings(IList<ProductCatalogGroupMapping> mappings)
+        {
+            if (mappings == null || mappings.Count == 0)
+            {
+                return;
+            }
+
+            foreach (ProductCatalogGroupMapping mapping in mappings)
+            {
+                Writer.WriteStartElement("PRODUCT_TO_CATALOGGROUP_MAP");
+                _writeOptionalElementString(Writer, "CATALOG_GROUP_ID", mapping.CatalogGroupId);
+                if (mapping.Order.HasValue)
+                {
+                    Writer.WriteElementString("PRODUCT_TO_CATALOGGROUP_MAP_ORDER", mapping.Order.Value.ToString());
+                }
+                Writer.WriteEndElement(); // !PRODUCT_TO_CATALOGGROUP_MAP
+            }
+        } // !_writeCatalogGroupMappings()
+
+
+        private static string _referenceTypeToString(ReferenceTypes type)
+        {
+            switch (type)
+            {
+                case ReferenceTypes.SparePart: return "sparepart";
+                case ReferenceTypes.Accessories: return "accessories";
+                case ReferenceTypes.ConsistsOf: return "consists_of";
+                case ReferenceTypes.Similar: return "similar";
+                case ReferenceTypes.Select: return "select";
+                case ReferenceTypes.Mandatory: return "mandatory";
+                case ReferenceTypes.FollowUp: return "followup";
+                case ReferenceTypes.BaseProduct: return "base_product";
+                case ReferenceTypes.Others: return "others";
+                default: return null;
+            }
+        } // !_referenceTypeToString()
     }
 }
