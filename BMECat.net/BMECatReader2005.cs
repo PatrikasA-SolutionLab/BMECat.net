@@ -185,7 +185,7 @@ namespace BMECat.net
                 XmlNode buyerNode = XmlUtils.SelectSingleNode(doc, "/bmecat:BMECAT/bmecat:HEADER/bmecat:BUYER", nsmgr);
                 if (buyerNode != null)
                 {
-                    XmlNode addressNode = XmlUtils.SelectSingleNode(doc, "./bmecat:ADDRESS", nsmgr);
+                    XmlNode addressNode = XmlUtils.SelectSingleNode(buyerNode, "./bmecat:ADDRESS", nsmgr);
                     if (addressNode != null)
                     {
                         retval.Buyer = _ReadPartyAddress(addressNode, nsmgr);
@@ -204,7 +204,7 @@ namespace BMECat.net
                 if (supplierNode != null)
                 {
 
-                    XmlNode addressNode = XmlUtils.SelectSingleNode(doc, "./bmecat:ADDRESS", nsmgr);
+                    XmlNode addressNode = XmlUtils.SelectSingleNode(supplierNode, "./bmecat:ADDRESS", nsmgr);
                     if (addressNode != null)
                     {
                         retval.Supplier = _ReadPartyAddress(addressNode, nsmgr);
@@ -487,18 +487,18 @@ namespace BMECat.net
                 });
             }
 
-            XmlNode logisticDetailsNode = XmlUtils.SelectSingleNode(productNode, "./bmecat:PRODUCT_LOGISTIC_DETAILS", nsmgr);
+            XmlNode logisticDetailsNode = XmlUtils.SelectSingleNode(productNode, "./bmecat:PRODUCT_LOGISTICS", nsmgr);
             if (logisticDetailsNode != null)
             {
                 product.LogisticsDetails = new LogisticsDetails()
                 {
                     CountryOfOrigin = default(CountryCodes).FromString(XmlUtils.nodeAsString(logisticDetailsNode, "./bmecat:COUNTRY_OF_ORIGIN", nsmgr)),
                     CustomsTariffNumber = XmlUtils.nodesAsStrings(logisticDetailsNode, "./bmecat:CUSTOMS_TARIFF_NUMBER", nsmgr),
-                    Volume = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:VOLUME", nsmgr),
-                    Weight = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:WEIGHT", nsmgr),
-                    Length = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:LENGTH", nsmgr),
-                    Width = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:WIDTH", nsmgr),
-                    Depth = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:DEPTH", nsmgr),
+                    Volume = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:VOLUME", nsmgr),
+                    Weight = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:WEIGHT", nsmgr),
+                    Length = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:LENGTH", nsmgr),
+                    Width = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:WIDTH", nsmgr),
+                    Depth = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:DEPTH", nsmgr),
                 };
             }
 
@@ -614,23 +614,23 @@ namespace BMECat.net
         {
             Party p = new Party()
             {
-                Name2 = XmlUtils.nodeAsString(addressNode, "./bmecat:NAME2"),
-                Name3 = XmlUtils.nodeAsString(addressNode, "./bmecat:NAME2"),
-                Department = XmlUtils.nodeAsString(addressNode, "./bmecat:DEPARTMENT"),
-                ContactName = XmlUtils.nodeAsString(addressNode, "./bmecat:CONTACT"),
-                Street = XmlUtils.nodeAsString(addressNode, "./bmecat:STREET"),
-                Zip = XmlUtils.nodeAsString(addressNode, "./bmecat:ZIP"),
-                BoxNo = XmlUtils.nodeAsString(addressNode, "./bmecat:BOXNO"),
-                ZipBox = XmlUtils.nodeAsString(addressNode, "./bmecat:ZIPBOX"),
-                City = XmlUtils.nodeAsString(addressNode, "./bmecat:CITY"),
-                State = XmlUtils.nodeAsString(addressNode, "./bmecat:STATE"),
-                Country = XmlUtils.nodeAsString(addressNode, "./bmecat:COUNTRY"),
-                VATID = XmlUtils.nodeAsString(addressNode, "./bmecat:VAT_ID"),
-                Phone = XmlUtils.nodeAsString(addressNode, "./bmecat:PHONE"), // @todo phone is typed
-                Fax = XmlUtils.nodeAsString(addressNode, "./bmecat:FAX") // @todo fax is typed
+                Name2 = XmlUtils.nodeAsString(addressNode, "./bmecat:NAME2", nsmgr),
+                Name3 = XmlUtils.nodeAsString(addressNode, "./bmecat:NAME3", nsmgr),
+                Department = XmlUtils.nodeAsString(addressNode, "./bmecat:DEPARTMENT", nsmgr),
+                ContactName = XmlUtils.nodeAsString(addressNode, "./bmecat:CONTACT", nsmgr),
+                Street = XmlUtils.nodeAsString(addressNode, "./bmecat:STREET", nsmgr),
+                Zip = XmlUtils.nodeAsString(addressNode, "./bmecat:ZIP", nsmgr),
+                BoxNo = XmlUtils.nodeAsString(addressNode, "./bmecat:BOXNO", nsmgr),
+                ZipBox = XmlUtils.nodeAsString(addressNode, "./bmecat:ZIPBOX", nsmgr),
+                City = XmlUtils.nodeAsString(addressNode, "./bmecat:CITY", nsmgr),
+                State = XmlUtils.nodeAsString(addressNode, "./bmecat:STATE", nsmgr),
+                Country = XmlUtils.nodeAsString(addressNode, "./bmecat:COUNTRY", nsmgr),
+                VATID = XmlUtils.nodeAsString(addressNode, "./bmecat:VAT_ID", nsmgr),
+                Phone = XmlUtils.nodeAsString(addressNode, "./bmecat:PHONE", nsmgr), // @todo phone is typed
+                Fax = XmlUtils.nodeAsString(addressNode, "./bmecat:FAX", nsmgr) // @todo fax is typed
             };
 
-            foreach (XmlNode contactDetailNode in XmlUtils.SelectNodes(addressNode, "./bmecat:CONTACT_DETAILS"))
+            foreach (XmlNode contactDetailNode in XmlUtils.SelectNodes(addressNode, "./bmecat:CONTACT_DETAILS", nsmgr))
             {
                 p.ContactDetails.Add(new ContactDetails()
                 {

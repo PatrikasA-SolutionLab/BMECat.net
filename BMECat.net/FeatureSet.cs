@@ -26,7 +26,7 @@ namespace BMECat.net
     public class FeatureSet
     {
         public FeatureClassificationSystem FeatureClassificationSystem { get; set; }
-        public IList<Feature> Features { get; internal set; } = new List<Feature>();
+        public IList<Feature> Features { get; set; } = new List<Feature>();
 
 
         public bool Contains(string featureName, bool ignoreCase = true)

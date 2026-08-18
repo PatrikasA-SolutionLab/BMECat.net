@@ -203,5 +203,159 @@ namespace BMECat.net_Test
 
             return catalog;
         } // !_GenerateSimpleCatalog()
+
+
+        [TestMethod]
+        public async Task WriteParty_RoundTrip()
+        {
+            ProductCatalog catalog = _GenerateSimpleCatalog();
+            catalog.Supplier = new Party
+            {
+                Id = "SUPP-001",
+                Name = "Acme Corp",
+                Street = "123 Main St",
+                City = "Berlin",
+                Zip = "10115",
+                Country = "DE",
+                Phone = "+49 30 12345"
+            };
+
+            MemoryStream ms = new MemoryStream();
+            catalog.Save(ms);
+            ms.Position = 0;
+            ProductCatalog loaded = await ProductCatalog.LoadAsync(ms);
+
+            Assert.IsNotNull(loaded.Supplier);
+            Assert.AreEqual("Acme Corp", loaded.Supplier.Name);
+            Assert.AreEqual("Berlin", loaded.Supplier.City);
+        } // !WriteParty_RoundTrip()
+
+
+        [TestMethod]
+        public async Task WriteLogisticsDetails_RoundTrip()
+        {
+            ProductCatalog catalog = _GenerateSimpleCatalog();
+            catalog.Products[0].LogisticsDetails = new LogisticsDetails
+            {
+                CountryOfOrigin = CountryCodes.DE,
+                Weight = 1.5m,
+                Length = 100m,
+                Width = 50m,
+                Depth = 20m,
+                CustomsTariffNumber = new List<string> { "84713000" }
+            };
+
+            MemoryStream ms = new MemoryStream();
+            catalog.Save(ms);
+            ms.Position = 0;
+            ProductCatalog loaded = await ProductCatalog.LoadAsync(ms);
+
+            LogisticsDetails ld = loaded.Products[0].LogisticsDetails;
+            Assert.IsNotNull(ld);
+            Assert.AreEqual(CountryCodes.DE, ld.CountryOfOrigin);
+            Assert.AreEqual(1.5m, ld.Weight);
+            Assert.AreEqual(1, ld.CustomsTariffNumber?.Count);
+            Assert.AreEqual("84713000", ld.CustomsTariffNumber[0]);
+        } // !WriteLogisticsDetails_RoundTrip()
+
+
+        [TestMethod]
+        public async Task WriteMimeInfo_RoundTrip()
+        {
+            ProductCatalog catalog = _GenerateSimpleCatalog();
+            catalog.Products[0].MimeInfos = new List<MimeInfo>
+            {
+                new MimeInfo
+                {
+                    MimeType = MimeTypes.ImageJpeg,
+                    Source = "images/product.jpg",
+                    Description = "Product photo",
+                    Purpose = "normal",
+                    Order = 1
+                }
+            };
+
+            MemoryStream ms = new MemoryStream();
+            catalog.Save(ms);
+            ms.Position = 0;
+            ProductCatalog loaded = await ProductCatalog.LoadAsync(ms);
+
+            Assert.AreEqual(1, loaded.Products[0].MimeInfos?.Count);
+            MimeInfo mime = loaded.Products[0].MimeInfos[0];
+            Assert.AreEqual(MimeTypes.ImageJpeg, mime.MimeType);
+            Assert.AreEqual("images/product.jpg", mime.Source);
+            Assert.AreEqual("normal", mime.Purpose);
+        } // !WriteMimeInfo_RoundTrip()
+
+
+        [TestMethod]
+        public async Task WriteFeatureSets_RoundTrip()
+        {
+            ProductCatalog catalog = _GenerateSimpleCatalog();
+            catalog.Products[0].FeatureSets = new List<FeatureSet>
+            {
+                new FeatureSet
+                {
+                    FeatureClassificationSystem = new FeatureClassificationSystem
+                    {
+                        Classification = "ECLASS",
+                        GroupName = "Office Supplies"
+                    },
+                    Features = new List<Feature>
+                    {
+                        new Feature { Name = "Color", Values = new List<string> { "Blue" } },
+                        new Feature { Name = "Width", Values = new List<string> { "210" } }
+                    }
+                }
+            };
+
+            MemoryStream ms = new MemoryStream();
+            catalog.Save(ms);
+            ms.Position = 0;
+            ProductCatalog loaded = await ProductCatalog.LoadAsync(ms);
+
+            Assert.AreEqual(1, loaded.Products[0].FeatureSets?.Count);
+            FeatureSet fs = loaded.Products[0].FeatureSets[0];
+            Assert.AreEqual("ECLASS", fs.FeatureClassificationSystem?.Classification);
+            Assert.AreEqual(2, fs.Features?.Count);
+            Assert.AreEqual("Color", fs.Features[0].Name);
+            Assert.AreEqual("Blue", fs.Features[0].Values?[0]);
+        } // !WriteFeatureSets_RoundTrip()
+
+
+        [TestMethod]
+        public async Task WriteCatalogStructures_RoundTrip()
+        {
+            ProductCatalog catalog = _GenerateSimpleCatalog();
+            catalog.CatalogStructures = new List<CatalogStructure>
+            {
+                new CatalogStructure
+                {
+                    Type = CatalogStructureTypes.Node,
+                    GroupId = "CAT-1",
+                    GroupName = "Electronics",
+                    GroupOrder = "1"
+                },
+                new CatalogStructure
+                {
+                    Type = CatalogStructureTypes.Leaf,
+                    GroupId = "CAT-1-1",
+                    GroupName = "Laptops",
+                    ParentId = "CAT-1",
+                    GroupOrder = "1"
+                }
+            };
+
+            MemoryStream ms = new MemoryStream();
+            catalog.Save(ms);
+            ms.Position = 0;
+            ProductCatalog loaded = await ProductCatalog.LoadAsync(ms);
+
+            Assert.AreEqual(2, loaded.CatalogStructures?.Count);
+            CatalogStructure root = loaded.CatalogStructures.First(s => s.GroupId == "CAT-1");
+            Assert.AreEqual("Electronics", root.GroupName);
+            CatalogStructure leaf = loaded.CatalogStructures.First(s => s.GroupId == "CAT-1-1");
+            Assert.AreEqual("CAT-1", leaf.ParentId);
+        } // !WriteCatalogStructures_RoundTrip()
     }
 }

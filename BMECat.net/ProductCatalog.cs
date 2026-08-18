@@ -84,17 +84,17 @@ namespace BMECat.net
         /// This allows easy further processing of the stream.
         /// </summary>
         /// <param name="stream"></param>
-        public async Task SaveAsync(Stream stream, BMECatExtensions extensions = null)
+        public async Task SaveAsync(Stream stream, BMECatExtensions extensions = null, BMECatVersion version = BMECatVersion.Version2005)
         {
             BMECatWriter writer = new BMECatWriter();
-            await writer.SaveAsync(this, stream, extensions);
+            await writer.SaveAsync(this, stream, extensions, version);
         } // !Save()
 
 
-        public async Task SaveAsync(string filename, BMECatExtensions extensions = null)
+        public async Task SaveAsync(string filename, BMECatExtensions extensions = null, BMECatVersion version = BMECatVersion.Version2005)
         {
             BMECatWriter writer = new BMECatWriter();
-            await writer.SaveAsync(this, filename, extensions);
+            await writer.SaveAsync(this, filename, extensions, version);
         } // !Save()
 
 
@@ -133,16 +133,16 @@ namespace BMECat.net
         /// This allows easy further processing of the stream.
         /// </summary>
         /// <param name="stream"></param>
-        public void Save(Stream stream, BMECatExtensions extensions = null)
+        public void Save(Stream stream, BMECatExtensions extensions = null, BMECatVersion version = BMECatVersion.Version2005)
         {            
-            Task t = SaveAsync(stream, extensions);
+            Task t = SaveAsync(stream, extensions, version);
             t.Wait();
         } // !Save()
 
 
-        public void Save(string filename, BMECatExtensions extensions = null)
+        public void Save(string filename, BMECatExtensions extensions = null, BMECatVersion version = BMECatVersion.Version2005)
         {            
-            Task t = SaveAsync(filename, extensions);
+            Task t = SaveAsync(filename, extensions, version);
             t.Wait();
         } // !Save()
     }
