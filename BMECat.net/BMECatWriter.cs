@@ -70,8 +70,8 @@ namespace BMECat.net
             Writer.WriteEndElement(); // !CATALOG
 
             _writeParty("BUYER", this.Catalog.Buyer);
-            _writeParty("SUPPLIER", this.Catalog.Supplier);
             _writeAgreement();
+            _writeParty("SUPPLIER", this.Catalog.Supplier);
 
             Writer.WriteEndElement(); // !HEADER
             #endregion // !Header
@@ -94,15 +94,6 @@ namespace BMECat.net
                     _writeOptionalElementString(Writer, "INTERNATIONAL_PID", id.Id, new Dictionary<string, string>() { { "type", id.Type.EnumToString() } });
                 }
 
-
-                /// deprecate: this element will be removed soon according to the BMECat 200 documentation
-                ProductId eanPId = product.PIds.FirstOrDefault(p => p.Type.Equals(ProductIdTypes.EAN));
-                if (eanPId != null)
-                {
-                    _writeOptionalElementString(Writer, "EAN", eanPId.Id);
-                }
-                
-                _writeOptionalElementString(Writer, "STOCK", String.Format("{0}", product.Stock));
                 _writeOptionalElementString(Writer, "MANUFACTURER_PID", String.Format("{0}", product.ManufacturerPID));
                 _writeOptionalElementString(Writer, "MANUFACTURER_NAME", String.Format("{0}", product.ManufacturerName));
                 _writeOptionalElementString(Writer, "MANUFACTURER_TYPE_DESCR", String.Format("{0}", product.ManufacturerTypeDescription));
@@ -135,12 +126,20 @@ namespace BMECat.net
 
                     foreach (ProductPrice price in product.Prices)
                     {
+                        string priceTypeStr = price.PriceType.EnumToString();
+                        if (string.IsNullOrEmpty(priceTypeStr))
+                        {
+                            continue;
+                        }
                         Writer.WriteStartElement("PRODUCT_PRICE");
-                        Writer.WriteAttributeString("price_type", price.PriceType.EnumToString());
+                        Writer.WriteAttributeString("price_type", priceTypeStr);
                         Writer.WriteElementString("PRICE_AMOUNT", price.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
                         Writer.WriteElementString("PRICE_CURRENCY", price.Currency.ToString());
                         Writer.WriteElementString("TAX", price.Tax.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
-                        Writer.WriteElementString("LOWER_BOUND", price.LowerBound.ToString());
+                        if (price.LowerBound.HasValue)
+                        {
+                            Writer.WriteElementString("LOWER_BOUND", price.LowerBound.Value.ToString());
+                        }
                         Writer.WriteEndElement(); // !PRODUCT_PRICE
                     }
                     Writer.WriteEndElement(); // !PRODUCT_PRICE_DETAILS
@@ -203,9 +202,9 @@ namespace BMECat.net
             Writer.WriteElementString("TIME", date.ToString("hh:mm"));
             Writer.WriteElementString("TIMEZONE", date.ToString("zzz"));
             */
-                if (date.HasValue)
+            if (date.HasValue)
             {
-                Writer.WriteString(date.Value.ToString("yyyy-MM-ddThh:mm:sszzz"));
+                Writer.WriteString(date.Value.ToString("yyyy-MM-ddTHH:mm:sszzz"));
             }
             Writer.WriteEndElement();
         } // !_writeDateTime()
@@ -278,6 +277,7 @@ namespace BMECat.net
             switch (version)
             {
                 case BMECatVersion.Version12: return "http://www.bmecat.org/bmecat-1.2";
+                case BMECatVersion.Version2005_1: return "http://www.bmecat.org/bmecat/2005.1";
                 default: return "http://www.bmecat.org/bmecat/2005fd";
             }
         } // !_getNamespace()
@@ -288,6 +288,7 @@ namespace BMECat.net
             switch (version)
             {
                 case BMECatVersion.Version12: return "1.2";
+                case BMECatVersion.Version2005_1: return "2005.1";
                 default: return "2005";
             }
         } // !_getVersionString()
@@ -462,7 +463,7 @@ namespace BMECat.net
 
         private void _writeOptionalElementString(XmlTextWriter writer, string tagName, BMECatExtensions extensions, QuantityCode value)
         {
-            if (value == null || (value.ClearText == null && value.Code == QuantityCodes.Unknown))
+            if (value == null || (value.ClearText == null && (value.Code == null || value.Code == QuantityCodes.Unknown)))
             {
                 return;
             }
@@ -477,39 +478,51 @@ namespace BMECat.net
                 return;
             }
 
-            Writer.WriteStartElement("PRODUCT_LOGISTICS");
-            if (logistics.CountryOfOrigin.HasValue)
-            {
-                Writer.WriteElementString("COUNTRY_OF_ORIGIN", logistics.CountryOfOrigin.Value.EnumToString());
-            }
+            Writer.WriteStartElement("PRODUCT_LOGISTIC_DETAILS");
             if (logistics.CustomsTariffNumber != null)
             {
                 foreach (string tariff in logistics.CustomsTariffNumber)
                 {
-                    _writeOptionalElementString(Writer, "CUSTOMS_TARIFF_NUMBER", tariff);
+                    if (!string.IsNullOrEmpty(tariff))
+                    {
+                        Writer.WriteStartElement("CUSTOMS_TARIFF_NUMBER");
+                        Writer.WriteElementString("CUSTOMS_NUMBER", tariff);
+                        Writer.WriteEndElement(); // !CUSTOMS_TARIFF_NUMBER
+                    }
                 }
             }
-            if (logistics.Weight.HasValue)
+            if (logistics.CountryOfOrigin.HasValue)
             {
-                Writer.WriteElementString("WEIGHT", _formatDecimal(logistics.Weight.Value));
+                Writer.WriteElementString("COUNTRY_OF_ORIGIN", logistics.CountryOfOrigin.Value.EnumToString());
             }
-            if (logistics.Length.HasValue)
+            bool hasDimensions = logistics.Weight.HasValue || logistics.Length.HasValue ||
+                                  logistics.Width.HasValue || logistics.Depth.HasValue || logistics.Volume.HasValue;
+            if (hasDimensions)
             {
-                Writer.WriteElementString("LENGTH", _formatDecimal(logistics.Length.Value));
+                Writer.WriteStartElement("PRODUCT_DIMENSIONS");
+                if (logistics.Volume.HasValue)
+                {
+                    Writer.WriteElementString("VOLUME", _formatDecimal(logistics.Volume.Value));
+                }
+                if (logistics.Weight.HasValue)
+                {
+                    Writer.WriteElementString("WEIGHT", _formatDecimal(logistics.Weight.Value));
+                }
+                if (logistics.Length.HasValue)
+                {
+                    Writer.WriteElementString("LENGTH", _formatDecimal(logistics.Length.Value));
+                }
+                if (logistics.Width.HasValue)
+                {
+                    Writer.WriteElementString("WIDTH", _formatDecimal(logistics.Width.Value));
+                }
+                if (logistics.Depth.HasValue)
+                {
+                    Writer.WriteElementString("DEPTH", _formatDecimal(logistics.Depth.Value));
+                }
+                Writer.WriteEndElement(); // !PRODUCT_DIMENSIONS
             }
-            if (logistics.Width.HasValue)
-            {
-                Writer.WriteElementString("WIDTH", _formatDecimal(logistics.Width.Value));
-            }
-            if (logistics.Depth.HasValue)
-            {
-                Writer.WriteElementString("DEPTH", _formatDecimal(logistics.Depth.Value));
-            }
-            if (logistics.Volume.HasValue)
-            {
-                Writer.WriteElementString("VOLUME", _formatDecimal(logistics.Volume.Value));
-            }
-            Writer.WriteEndElement(); // !PRODUCT_LOGISTICS
+            Writer.WriteEndElement(); // !PRODUCT_LOGISTIC_DETAILS
         } // !_writeLogisticsDetails()
 
 
