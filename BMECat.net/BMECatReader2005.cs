@@ -487,18 +487,18 @@ namespace BMECat.net
                 });
             }
 
-            XmlNode logisticDetailsNode = XmlUtils.SelectSingleNode(productNode, "./bmecat:PRODUCT_LOGISTICS", nsmgr);
+            XmlNode logisticDetailsNode = XmlUtils.SelectSingleNode(productNode, "./bmecat:PRODUCT_LOGISTIC_DETAILS", nsmgr);
             if (logisticDetailsNode != null)
             {
                 product.LogisticsDetails = new LogisticsDetails()
                 {
                     CountryOfOrigin = default(CountryCodes).FromString(XmlUtils.nodeAsString(logisticDetailsNode, "./bmecat:COUNTRY_OF_ORIGIN", nsmgr)),
-                    CustomsTariffNumber = XmlUtils.nodesAsStrings(logisticDetailsNode, "./bmecat:CUSTOMS_TARIFF_NUMBER", nsmgr),
-                    Volume = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:VOLUME", nsmgr),
-                    Weight = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:WEIGHT", nsmgr),
-                    Length = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:LENGTH", nsmgr),
-                    Width = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:WIDTH", nsmgr),
-                    Depth = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:DEPTH", nsmgr),
+                    CustomsTariffNumber = XmlUtils.nodesAsStrings(logisticDetailsNode, "./bmecat:CUSTOMS_TARIFF_NUMBER/bmecat:CUSTOMS_NUMBER", nsmgr),
+                    Volume = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:VOLUME", nsmgr),
+                    Weight = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:WEIGHT", nsmgr),
+                    Length = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:LENGTH", nsmgr),
+                    Width = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:WIDTH", nsmgr),
+                    Depth = XmlUtils.nodeAsDecimal(logisticDetailsNode, "./bmecat:PRODUCT_DIMENSIONS/bmecat:DEPTH", nsmgr),
                 };
             }
 

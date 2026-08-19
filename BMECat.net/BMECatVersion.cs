@@ -26,6 +26,7 @@ namespace BMECat.net
     {
         Unknown = 0,
         Version12,
-        Version2005
+        Version2005,
+        Version2005_1
     }
 }
