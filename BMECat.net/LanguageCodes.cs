@@ -23,14 +23,109 @@ namespace BMECat.net
     public enum LanguageCodes
     {
         /// <summary>
-        /// Deutsch
+        /// Bulgarian
+        /// </summary>
+        BUL,
+
+        /// <summary>
+        /// Czech
+        /// </summary>
+        CES,
+
+        /// <summary>
+        /// Danish
+        /// </summary>
+        DAN,
+
+        /// <summary>
+        /// German
         /// </summary>
         DEU,
 
         /// <summary>
-        /// Englisch
+        /// English
         /// </summary>
-        ENG
+        ENG,
+
+        /// <summary>
+        /// Finnish
+        /// </summary>
+        FIN,
+
+        /// <summary>
+        /// French
+        /// </summary>
+        FRA,
+
+        /// <summary>
+        /// Hungarian
+        /// </summary>
+        HUN,
+
+        /// <summary>
+        /// Italian
+        /// </summary>
+        ITA,
+
+        /// <summary>
+        /// Japanese
+        /// </summary>
+        JPN,
+
+        /// <summary>
+        /// Dutch
+        /// </summary>
+        NLD,
+
+        /// <summary>
+        /// Norwegian
+        /// </summary>
+        NOR,
+
+        /// <summary>
+        /// Polish
+        /// </summary>
+        POL,
+
+        /// <summary>
+        /// Portuguese
+        /// </summary>
+        POR,
+
+        /// <summary>
+        /// Romanian
+        /// </summary>
+        RON,
+
+        /// <summary>
+        /// Russian
+        /// </summary>
+        RUS,
+
+        /// <summary>
+        /// Slovak
+        /// </summary>
+        SLK,
+
+        /// <summary>
+        /// Spanish
+        /// </summary>
+        SPA,
+
+        /// <summary>
+        /// Swedish
+        /// </summary>
+        SWE,
+
+        /// <summary>
+        /// Turkish
+        /// </summary>
+        TUR,
+
+        /// <summary>
+        /// Chinese
+        /// </summary>
+        ZHO,
     }
 
 

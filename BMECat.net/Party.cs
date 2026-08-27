@@ -23,6 +23,11 @@ namespace BMECat.net
     public class Party
     {
         public string Id { get; set; }
+        /// <summary>
+        /// The type attribute for the party ID element (e.g. "supplier_specific", "nexmart").
+        /// Defaults to "{role}_specific" if not set.
+        /// </summary>
+        public string IdType { get; set; }
         public string Name { get; set; }
         public string ContactName { get; set; }
 

@@ -254,11 +254,11 @@ namespace BMECat.net
 
         private void _writeOptionalElementString(XmlTextWriter writer, string tagName, QuantityCode value, BMECatExtensions extensions = null)
         {
-            if (value.ClearText != null)
+            if (!string.IsNullOrEmpty(value.ClearText))
             {
                 writer.WriteElementString(tagName, value.ClearText);
             }
-            else if (value.Code != QuantityCodes.Unknown)
+            else if (value.Code.HasValue && value.Code.Value != QuantityCodes.Unknown)
             {
                 if ((extensions != null) && (extensions.QuantityCodeConverter != null))
                 {
@@ -266,7 +266,7 @@ namespace BMECat.net
                 }
                 else
                 {
-                    writer.WriteElementString(tagName, value.Code.ToString());
+                    writer.WriteElementString(tagName, value.Code.Value.ToString());
                 }
             }
         } // !_writeOptionalElementString()
@@ -278,7 +278,7 @@ namespace BMECat.net
             {
                 case BMECatVersion.Version12: return "http://www.bmecat.org/bmecat-1.2";
                 case BMECatVersion.Version2005_1: return "http://www.bmecat.org/bmecat/2005.1";
-                default: return "http://www.bmecat.org/bmecat/2005fd";
+                default: return "http://www.bmecat.org/bmecat/2005";
             }
         } // !_getNamespace()
 
@@ -305,7 +305,7 @@ namespace BMECat.net
             if (!string.IsNullOrEmpty(party.Id))
             {
                 Writer.WriteStartElement($"{role}_ID");
-                Writer.WriteAttributeString("type", $"{role.ToLower()}_specific");
+                Writer.WriteAttributeString("type", party.IdType ?? $"{role.ToLower()}_specific");
                 Writer.WriteString(party.Id);
                 Writer.WriteEndElement();
             }
@@ -478,8 +478,18 @@ namespace BMECat.net
                 return;
             }
 
+            bool hasTariffNumbers = logistics.CustomsTariffNumber?.Exists(t => !string.IsNullOrEmpty(t)) == true;
+            bool hasDimensions = logistics.Weight.HasValue || logistics.Length.HasValue ||
+                                  logistics.Width.HasValue || logistics.Depth.HasValue || logistics.Volume.HasValue;
+            bool hasContent = hasTariffNumbers || logistics.CountryOfOrigin.HasValue || hasDimensions;
+
+            if (!hasContent)
+            {
+                return;
+            }
+
             Writer.WriteStartElement("PRODUCT_LOGISTIC_DETAILS");
-            if (logistics.CustomsTariffNumber != null)
+            if (hasTariffNumbers)
             {
                 foreach (string tariff in logistics.CustomsTariffNumber)
                 {
@@ -495,8 +505,6 @@ namespace BMECat.net
             {
                 Writer.WriteElementString("COUNTRY_OF_ORIGIN", logistics.CountryOfOrigin.Value.EnumToString());
             }
-            bool hasDimensions = logistics.Weight.HasValue || logistics.Length.HasValue ||
-                                  logistics.Width.HasValue || logistics.Depth.HasValue || logistics.Volume.HasValue;
             if (hasDimensions)
             {
                 Writer.WriteStartElement("PRODUCT_DIMENSIONS");
